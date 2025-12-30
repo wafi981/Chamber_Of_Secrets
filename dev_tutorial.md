@@ -111,4 +111,134 @@ We configured this this token earlier in our commands. CLI auto-authenticates fu
 
 
 
+
+## What are tokens?
+
+What a Vault Token Is
+
+A Vault token is the proof that a client (human or machine) is authenticated and authorized to perform actions in Vault.
+
+No token = no access.
+
+
+#### Every Vault request:
+Must include a token, Is evaluated against policies attached to that token
+
+
+Think of a token as: A short‑lived identity + permission bundle
+
+
+
+#### How Tokens Are Issued
+
+- Client authenticates using an auth method (userpass, GitHub, Kubernetes, OIDC, etc.)
+
+- Vault verifies identity with a trusted source
+
+- Vault issues a token
+
+- Client uses the token for all future requests
+
+Auth method ≠ Token :Auth method proves who you are
+
+Token is what you use
+
+
+
+#### Root Token (Special Case)
+
+- Created at Vault initialization
+
+- Full access (like root in Linux)
+
+- No TTL (never expires)
+
+
+
+#### ⚠️ Production rule:
+
+Root tokens are ONLY for initial setup or emergencies
+
+
+
+Token Metadata
+Every token has:
+
+```
+Field	    Meaning
+TTL	      How long token is valid
+Max TTL	  Absolute lifetime
+Renewable	Can be extended
+Policies	 What it can do
+Accessor	 Safe handle to manage token
+```
+
+
+
+#### Token accessors:
+Can revoke / renew tokens
+
+Cannot access secrets
+
+
+
+### Token Types (Very Important)
+
+
+
+#### 1. Service Tokens (Default)
+Stored in Vault, Renewable, Revocable, Support cubbyhole
+
+
+Used for:
+- Humans
+
+- CI/CD
+
+- Long‑running services
+
+
+
+Prefix: hvs.*
+
+
+#### 2. Batch Tokens
+
+Not stored, Not renewable, Lightweight, High scale
+
+Used for:
+
+- Massive container fleets
+
+- Very short‑lived jobs
+
+- Prefix: hvb.*
+
+
+#### 3. Periodic Tokens
+
+Have TTL, No max TTL, Must be renewed continuously
+
+Used for:
+
+- Long‑running services that cannot re‑authenticate
+
+
+#### 4. Orphan Tokens
+
+Not tied to parent token
+
+Parent revocation does NOT revoke them
+
+Used when:
+
+- You want isolation from parent lifecycle
+
+
+
+#### Token Lifecycle Summary
+
+Create → Use → Renew → Revoke / Expire
+
+Good security = short TTL + renew when needed
  
