@@ -222,19 +222,3 @@ This is **exactly how real platforms start Vault**.
 4. Enable Kubernetes auth
 5. Connect GitHub Actions using JWT/OIDC
 6. Inject secrets into pods
-
----
-
-## Final Answer to Your Question
-
-> **Is Vault unsealed now?**
-
-✅ **Yes. Vault is fully unsealed and ready for use.**
-
----
-
-If you want, next we can:
-
-* Secure Vault (disable root usage)
-* Enable GitHub / OIDC auth
-* Wire Vault into GitHub Actions like NVIDIA‑style pipelines
