@@ -1,0 +1,94 @@
+name: Test Vault Secrets
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Fetch Secrets from Vault
+    runs-on: self-hosted
+
+    env:
+      VAULT_ADDR: https://127.0.0.1:8200
+      VAULT_SKIP_VERIFY: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Install Vault CLI (Mac)
+      - name: Install Vault CLI
+        run: |
+          if ! command -v vault &> /dev/null; then
+            brew tap hashicorp/tap
+            brew install hashicorp/tap/vault
+          else
+            echo "Vault already installed"
+          fi
+
+      # Install jq (Mac)
+      - name: Install jq
+        run: |
+          if ! command -v jq &> /dev/null; then
+            brew install jq
+          else
+            echo "jq already installed"
+          fi
+
+      # Vault Login
+      - name: Vault Login
+        env:
+          VAULT_TOKEN: hvs.REPLACE_WITH_REAL_ROOT_TOKEN
+        run: |
+          echo "🔐 Logging into Vault..."
+          vault login "$VAULT_TOKEN"
+
+      # Fetch Secrets
+      - name: Fetch Secrets from Vault
+        run: |
+          echo "🔹 Fetching secrets from Vault..."
+
+          SECRET_JSON=$(vault kv get -format=json secret/app/antlive/config)
+
+          echo "🔹 Exporting secrets..."
+
+          for key in $(echo "$SECRET_JSON" | jq -r '.data.data | keys[]'); do
+            value=$(echo "$SECRET_JSON" | jq -r ".data.data[\"$key\"]")
+            echo "$key=$value" >> $GITHUB_ENV
+          done
+
+          echo "✅ Secrets loaded"
+
+      # Validate Secrets
+      - name: Test Required Variables
+        run: |
+          echo "🔹 Testing required variables..."
+
+          REQUIRED_VARS=(
+            DB_NAME PORT MAILGUN_USER MAILGUN_API_KEY DATABASE_URL
+            MQTT_BROKER_HOST MQTT_BROKER_KEY URL_PREFIX_OTP
+            ACCESS_TOKEN_EXPIRY REFRESH_TOKEN_EXPIRY
+            REFRESH_JWT_SECRET ACCESS_JWT_SECRET API_MASTER_TOKEN
+            DO_SPACES_KEY DO_SPACES_SECRET DO_SPACES_REGION DO_SPACES_BUCKET
+            GOOGLE_CLIENT_ID GOOGLE_CLIENT_ID_ANDROID GOOGLE_CLIENT_ID_IOS
+            STREAM_PLAY_BACK_URL RABBITMQ_URL RABBITMQ_QUEUE
+            STREAM_FEED_URL STREAM_FEED_KEY ASSET_PREFIX_URL
+          )
+
+          MISSING=()
+
+          for var in "${REQUIRED_VARS[@]}"; do
+            if [ -z "${!var}" ]; then
+              MISSING+=("$var")
+            else
+              echo "$var=SET"
+            fi
+          done
+
+          if [ "${#MISSING[@]}" -gt 0 ]; then
+            echo "❌ Missing required variables:"
+            printf '%s\n' "${MISSING[@]}"
+            exit 1
+          else
+            echo "✅ All Vault secrets exist!"
+          fi
